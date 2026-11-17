@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useScroll, useSpring, useInView } from 'framer-motion';
+import { motion as Motion, AnimatePresence, useInView } from 'framer-motion';
 import { 
   Github, 
   Linkedin, 
@@ -23,8 +23,9 @@ import {
 } from 'lucide-react';
 
 // --- Gemini API Configuration ---
-const apiKey = ""; // Provided at runtime
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-2.5-flash-preview-09-2025";
+const GEMINI_DISABLED_MESSAGE = "AI features are disabled until a valid VITE_GEMINI_API_KEY is added to your .env file.";
 
 const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
   try {
@@ -40,37 +41,8 @@ const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
   }
 };
 
-// --- Download Helper ---
-const downloadResume = async (e) => {
-  if (e && e.preventDefault) e.preventDefault();
-  const filename = "Mohammed_Hamza_KF_Resume.pdf";
-  const baseUrl = import.meta.env.BASE_URL || '/';
-  const resumeUrl = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}resume.pdf`;
-
-  try {
-    const response = await fetch(resumeUrl);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
-  } catch (error) {
-    console.error("Direct blob download failed, falling back to standard link:", error);
-    const directLink = document.createElement('a');
-    directLink.href = resumeUrl;
-    directLink.download = filename;
-    directLink.target = '_blank';
-    directLink.rel = 'noopener noreferrer';
-    document.body.appendChild(directLink);
-    directLink.click();
-    document.body.removeChild(directLink);
-  }
-};
+const RESUME_URL = `${import.meta.env.BASE_URL}resume.pdf`;
+const RESUME_FILENAME = "Mohammed_Hamza_KF_Resume.pdf";
 
 // --- Configuration & Data ---
 const DEVELOPER_INFO = {
@@ -147,23 +119,23 @@ const EDUCATION = [
 // --- Shared Components ---
 
 const GlassCard = ({ children, className = "" }) => (
-  <motion.div 
+  <Motion.div 
     whileHover={{ y: -5 }}
     className={`bg-white/[0.03] backdrop-blur-lg border border-white/10 rounded-2xl p-6 shadow-xl ${className}`}
   >
     {children}
-  </motion.div>
+  </Motion.div>
 );
 
 const SectionHeading = ({ title, subtitle }) => (
   <div className="mb-12">
-    <motion.h2 
+    <Motion.h2 
       initial={{ opacity: 0, x: -20 }}
       whileInView={{ opacity: 1, x: 0 }}
       className="text-4xl font-bold text-white mb-2"
     >
       {title}
-    </motion.h2>
+    </Motion.h2>
     <div className="h-1.5 w-20 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 rounded-full" />
     {subtitle && <p className="text-slate-400 mt-4 max-w-2xl">{subtitle}</p>}
   </div>
@@ -180,6 +152,12 @@ const AIProjectConsultant = () => {
 
   const handleConsult = async () => {
     if (!input.trim()) return;
+
+    if (!GEMINI_API_KEY) {
+      setError(GEMINI_DISABLED_MESSAGE);
+      return;
+    }
+
     setLoading(true);
     setError("");
     setResponse("");
@@ -195,7 +173,7 @@ const AIProjectConsultant = () => {
 
     try {
       const data = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -207,7 +185,8 @@ const AIProjectConsultant = () => {
       );
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
       setResponse(text || "No response generated.");
-    } catch (err) {
+    } catch (error) {
+      console.error("AI project consultation failed:", error);
       setError("The AI is taking a quick break. Please try again in a moment.");
     } finally {
       setLoading(false);
@@ -216,7 +195,7 @@ const AIProjectConsultant = () => {
 
   return (
     <>
-      <motion.button
+      <Motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(true)}
@@ -226,19 +205,19 @@ const AIProjectConsultant = () => {
         <span className="absolute right-full mr-4 top-1/2 -translate-y-1/2 bg-slate-900 border border-white/10 px-3 py-1 rounded-lg text-xs font-bold text-cyan-400 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
           Project Consultant ✨
         </span>
-      </motion.button>
+      </Motion.button>
 
       <AnimatePresence>
         {isOpen && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
-            <motion.div 
+            <Motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
               className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" 
             />
-            <motion.div
+            <Motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -306,7 +285,7 @@ const AIProjectConsultant = () => {
                   </button>
                 </div>
               )}
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>
@@ -319,13 +298,18 @@ const SmartSummary = () => {
   const [loading, setLoading] = useState(false);
 
   const generatePitch = async (industry) => {
+    if (!GEMINI_API_KEY) {
+      setSummary(GEMINI_DISABLED_MESSAGE);
+      return;
+    }
+
     setLoading(true);
     setSummary("");
     const prompt = `Based on this bio: "${DEVELOPER_INFO.about}", generate a 2-sentence highly professional and creative elevator pitch for the ${industry} industry. Focus on the intersection of AI and Frontend.`;
 
     try {
       const data = await fetchWithRetry(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -333,7 +317,8 @@ const SmartSummary = () => {
         }
       );
       setSummary(data.candidates?.[0]?.content?.parts?.[0]?.text || "");
-    } catch (e) {
+    } catch (error) {
+      console.error("AI pitch generation failed:", error);
       setSummary("Failed to generate pitch. Please check connection.");
     } finally {
       setLoading(false);
@@ -357,19 +342,19 @@ const SmartSummary = () => {
       </div>
       <AnimatePresence mode="wait">
         {loading ? (
-          <motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center space-x-2 text-cyan-500">
+          <Motion.div key="loader" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center space-x-2 text-cyan-500">
             <Loader2 size={12} className="animate-spin" />
             <span className="text-[10px] uppercase font-mono tracking-tighter">AI Crafting...</span>
-          </motion.div>
+          </Motion.div>
         ) : summary && (
-          <motion.div 
+          <Motion.div 
             key="summary" 
             initial={{ opacity: 0, y: 10 }} 
             animate={{ opacity: 1, y: 0 }}
             className="p-4 bg-cyan-500/5 border border-cyan-500/10 rounded-xl text-xs text-slate-300 leading-relaxed italic"
           >
             "{summary.trim()}"
-          </motion.div>
+          </Motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -389,13 +374,13 @@ const Navbar = () => {
   return (
     <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? 'py-4 bg-[#020617]/80 backdrop-blur-xl border-b border-white/10' : 'py-6 bg-transparent'}`}>
       <div className="container mx-auto px-6 flex justify-between items-center">
-        <motion.div 
+        <Motion.div 
           initial={{ opacity: 0 }} 
           animate={{ opacity: 1 }} 
           className="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
         >
           HKF.
-        </motion.div>
+        </Motion.div>
         <div className="hidden md:flex space-x-8 text-sm font-medium text-slate-300">
           {['About', 'Skills', 'Projects', 'Experience', 'Contact'].map((item) => (
             <a key={item} href={`#${item.toLowerCase()}`} className="hover:text-cyan-400 transition-colors">
@@ -404,9 +389,8 @@ const Navbar = () => {
           ))}
         </div>
         <a
-          href="/resume.pdf"
-          download="Mohammed_Hamza_KF_Resume.pdf"
-          onClick={downloadResume}
+          href={RESUME_URL}
+          download={RESUME_FILENAME}
           className="px-5 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all text-sm font-semibold cursor-pointer flex items-center gap-1.5"
         >
           <Download className="w-4 h-4" />
@@ -428,7 +412,7 @@ const SkillItem = ({ skill }) => {
         <span className="text-cyan-400">{skill.level}%</span>
       </div>
       <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
-        <motion.div 
+        <Motion.div 
           initial={{ width: 0 }}
           animate={isInView ? { width: `${skill.level}%` } : {}}
           transition={{ duration: 1.5, ease: "easeOut" }}
@@ -439,21 +423,27 @@ const SkillItem = ({ skill }) => {
   );
 };
 
+const WORDS = ["Frontend Developer", "AI & ML Student", "Future Full Stack Engineer"];
+
 const Hero = () => {
-  const words = ["Frontend Developer", "AI & ML Student", "Future Full Stack Engineer"];
   const [index, setIndex] = useState(0);
   const [subIndex, setSubIndex] = useState(0);
   const [reverse, setReverse] = useState(false);
 
   useEffect(() => {
-    if (subIndex === words[index].length + 1 && !reverse) {
-      setReverse(true);
-      return;
+    const currentWord = WORDS[index];
+
+    if (subIndex === currentWord.length && !reverse) {
+      const timeout = setTimeout(() => setReverse(true), 150);
+      return () => clearTimeout(timeout);
     }
+
     if (subIndex === 0 && reverse) {
-      setReverse(false);
-      setIndex((prev) => (prev + 1) % words.length);
-      return;
+      const timeout = setTimeout(() => {
+        setReverse(false);
+        setIndex((prev) => (prev + 1) % WORDS.length);
+      }, 150);
+      return () => clearTimeout(timeout);
     }
 
     const timeout = setTimeout(() => {
@@ -469,18 +459,18 @@ const Hero = () => {
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center z-10">
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <motion.div 
+          <Motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="inline-block px-4 py-1.5 mb-6 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-semibold tracking-wide"
           >
             Available for Freelance
-          </motion.div>
+          </Motion.div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-white leading-tight mb-6">
             Hi, I'm <br />
             <span className="bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-400 bg-clip-text text-transparent">
@@ -488,32 +478,31 @@ const Hero = () => {
             </span>
           </h1>
           <p className="text-xl text-slate-400 mb-8 min-h-[1.5em] font-mono">
-            {words[index].substring(0, subIndex)}
+            {WORDS[index].substring(0, subIndex)}
             <span className="animate-pulse text-cyan-500">|</span>
           </p>
           <div className="flex flex-wrap gap-4">
-            <motion.a
+            <Motion.a
               href="#projects"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all flex items-center"
             >
               View Projects <ChevronRight className="ml-2 w-5 h-5" />
-            </motion.a>
-            <motion.a
-              href="/resume.pdf"
-              download="Mohammed_Hamza_KF_Resume.pdf"
-              onClick={downloadResume}
+            </Motion.a>
+            <Motion.a
+              href={RESUME_URL}
+              download={RESUME_FILENAME}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-xl font-bold hover:bg-white/10 transition-all flex items-center cursor-pointer"
             >
               <Download className="mr-2 w-5 h-5" /> Download Resume
-            </motion.a>
+            </Motion.a>
           </div>
-        </motion.div>
+        </Motion.div>
 
-        <motion.div
+        <Motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1 }}
@@ -523,7 +512,7 @@ const Hero = () => {
              <img src="/profile.png" alt="Mohammed Hamza KF" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
              <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60" />
           </div>
-          <motion.div 
+          <Motion.div 
             animate={{ y: [0, -10, 0] }}
             transition={{ duration: 3, repeat: Infinity }}
             className="absolute -bottom-6 -left-6 bg-slate-900/90 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-2xl"
@@ -535,8 +524,8 @@ const Hero = () => {
                 <p className="text-sm font-bold text-white">BSc AI & ML</p>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
+          </Motion.div>
+        </Motion.div>
       </div>
     </section>
   );
@@ -552,7 +541,7 @@ const ExperienceTimeline = () => (
         <div className="mb-16 relative">
           <div className="flex flex-col md:flex-row items-center">
             <div className="flex-1 md:text-right md:pr-12 mb-4 md:mb-0">
-              <motion.div 
+              <Motion.div 
                 whileInView={{ opacity: 1, x: 0 }}
                 initial={{ opacity: 0, x: -50 }}
                 className="inline-block p-1 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl"
@@ -568,7 +557,7 @@ const ExperienceTimeline = () => (
                     ))}
                   </ul>
                 </div>
-              </motion.div>
+              </Motion.div>
             </div>
             <div className="z-10 absolute left-0 md:left-1/2 transform -translate-x-1/2 w-8 h-8 bg-cyan-500 border-4 border-[#020617] rounded-full shadow-[0_0_15px_rgba(6,182,212,0.5)]" />
             <div className="flex-1 md:pl-12 hidden md:block" />
@@ -580,7 +569,7 @@ const ExperienceTimeline = () => (
             <div className="flex-1 md:pr-12 hidden md:block" />
             <div className="z-10 absolute left-0 md:left-1/2 transform -translate-x-1/2 w-8 h-8 bg-blue-500 border-4 border-[#020617] rounded-full shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
             <div className="flex-1 md:pl-12">
-              <motion.div 
+              <Motion.div 
                 whileInView={{ opacity: 1, x: 0 }}
                 initial={{ opacity: 0, x: 50 }}
                 className="bg-white/[0.03] border border-white/10 p-6 rounded-xl backdrop-blur-md"
@@ -591,7 +580,7 @@ const ExperienceTimeline = () => (
                   <span className="text-slate-500 text-sm">{EDUCATION[0].period}</span>
                   <span className="text-emerald-400 font-bold">{EDUCATION[0].status || "Currently Pursuing"}</span>
                 </div>
-              </motion.div>
+              </Motion.div>
             </div>
           </div>
         </div>
@@ -622,16 +611,16 @@ const App = () => {
       <AIProjectConsultant />
 
       <div className="fixed left-6 bottom-0 z-40 hidden lg:flex flex-col items-center space-y-6 after:content-[''] after:w-px after:h-24 after:bg-white/20 after:mt-6">
-        <motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={DEVELOPER_INFO.github} target="_blank" className="text-slate-400 transition-colors"><Github size={20} /></motion.a>
-        <motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={DEVELOPER_INFO.linkedin} target="_blank" className="text-slate-400 transition-colors"><Linkedin size={20} /></motion.a>
-        <motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={`mailto:${DEVELOPER_INFO.email}`} className="text-slate-400 transition-colors"><Mail size={20} /></motion.a>
+        <Motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={DEVELOPER_INFO.github} target="_blank" className="text-slate-400 transition-colors"><Github size={20} /></Motion.a>
+        <Motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={DEVELOPER_INFO.linkedin} target="_blank" className="text-slate-400 transition-colors"><Linkedin size={20} /></Motion.a>
+        <Motion.a whileHover={{ y: -3, color: '#06b6d4' }} href={`mailto:${DEVELOPER_INFO.email}`} className="text-slate-400 transition-colors"><Mail size={20} /></Motion.a>
       </div>
 
       <Hero />
 
       <section id="about" className="py-24 container mx-auto px-6">
         <div className="grid md:grid-cols-2 gap-16 items-center">
-          <motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}>
+          <Motion.div initial={{ opacity: 0, scale: 0.9 }} whileInView={{ opacity: 1, scale: 1 }}>
             <div className="relative">
                 <div className="absolute -inset-4 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-3xl blur-2xl opacity-10" />
                 <GlassCard className="relative overflow-hidden group">
@@ -648,7 +637,7 @@ const App = () => {
                     <SmartSummary />
                 </GlassCard>
             </div>
-          </motion.div>
+          </Motion.div>
 
           <div id="skills">
             <SectionHeading title="Core Skills" subtitle="Technologies I work with to bring digital visions to life." />
@@ -729,10 +718,10 @@ const App = () => {
                     <label className="block text-xs uppercase font-bold text-slate-500 mb-2">Message</label>
                     <textarea rows="5" required value={formData.message} onChange={(e) => setFormData({...formData, message: e.target.value})} className="w-full bg-slate-950 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none" placeholder="Tell me about your project..."></textarea>
                   </div>
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} disabled={isSubmitting} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2 disabled:opacity-50">
+                  <Motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} disabled={isSubmitting} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold flex items-center justify-center space-x-2 disabled:opacity-50">
                     {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : <><span>Send Message</span> <Send size={18} /></>}
-                  </motion.button>
-                  {status && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-emerald-400 text-center text-sm font-medium">{status}</motion.p>}
+                  </Motion.button>
+                  {status && <Motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-emerald-400 text-center text-sm font-medium">{status}</Motion.p>}
                 </form>
               </GlassCard>
             </div>
@@ -744,12 +733,13 @@ const App = () => {
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm">
           <p>© 2024 {DEVELOPER_INFO.name}. All rights reserved.</p>
           <div className="flex items-center space-x-6 mt-4 md:mt-0">
-            <button
-              onClick={downloadResume}
+            <a
+              href={RESUME_URL}
+              download={RESUME_FILENAME}
               className="hover:text-cyan-400 transition-colors flex items-center gap-1.5 cursor-pointer text-slate-400"
             >
               <Download size={14} /> Resume
-            </button>
+            </a>
             <a href={DEVELOPER_INFO.github} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">GitHub</a>
             <a href={DEVELOPER_INFO.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">LinkedIn</a>
           </div>
