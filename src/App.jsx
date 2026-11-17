@@ -40,17 +40,49 @@ const fetchWithRetry = async (url, options, retries = 5, backoff = 1000) => {
   }
 };
 
+// --- Download Helper ---
+const downloadResume = async (e) => {
+  if (e && e.preventDefault) e.preventDefault();
+  const filename = "Mohammed_Hamza_KF_Resume.pdf";
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const resumeUrl = `${baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'}resume.pdf`;
+
+  try {
+    const response = await fetch(resumeUrl);
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+  } catch (error) {
+    console.error("Direct blob download failed, falling back to standard link:", error);
+    const directLink = document.createElement('a');
+    directLink.href = resumeUrl;
+    directLink.download = filename;
+    directLink.target = '_blank';
+    directLink.rel = 'noopener noreferrer';
+    document.body.appendChild(directLink);
+    directLink.click();
+    document.body.removeChild(directLink);
+  }
+};
+
 // --- Configuration & Data ---
 const DEVELOPER_INFO = {
   name: "Mohammed Hamza KF",
-  title: "Frontend Developer | Future Full Stack Engineer",
-  location: "Chennai, India",
+  title: "Frontend Developer | Aspiring Full Stack Developer",
+  location: "Chennai, Tamil Nadu, India",
   email: "mohammedhamzakf06@gmail.com",
   phone: "7871354994",
   github: "https://github.com/hamzzzzzza",
   linkedin: "https://www.linkedin.com/in/kf-mohammad-hamza-0b978b366",
   portfolio: "hamzakf.in",
-  about: "I am a passionate Frontend Developer currently pursuing a BSc in AI & ML at SRM IST. My focus lies in bridging the gap between sophisticated artificial intelligence and intuitive user interfaces. I specialize in building high-performance, responsive web applications with a keen eye for modern UI/UX design. My goal is to evolve into a Full Stack Engineer capable of deploying end-to-end intelligent systems."
+  about: "B.Sc. Artificial Intelligence and Machine Learning student focused on frontend web development, with an interest in progressing towards full stack development. Familiar with building responsive web interfaces using HTML, CSS and JavaScript, and applying modern styling techniques. Has practical project experience and internship exposure at AspiraSys. Keen to contribute to real-world web projects and continue developing strong software engineering skills."
 };
 
 const PROJECTS = [
@@ -92,22 +124,23 @@ const SKILLS = [
 const EXPERIENCE = [
   {
     role: "Frontend Developer Intern",
-    company: "Aspirasys",
-    duration: "4–6 months",
+    company: "AspiraSys",
+    duration: "Internship",
     tasks: [
-      "Built responsive UI components using modern frameworks",
-      "Developed real-time website features for client projects",
-      "Improved overall user experience by optimizing rendering paths",
-      "Collaborated with cross-functional teams using Git/GitHub"
+      "Developed responsive and user-friendly web interface components.",
+      "Contributed to frontend development and UI implementation.",
+      "Applied frontend techniques to improve website presentation and usability.",
+      "Gained practical exposure to real-world web development workflows."
     ]
   }
 ];
 
 const EDUCATION = [
   {
-    degree: "BSc (Artificial Intelligence & Machine Learning)",
-    institution: "SRM Institute of Science and Technology – Ramapuram",
-    period: "2025 – 2028"
+    degree: "Bachelor of Science (B.Sc.) in Artificial Intelligence and Machine Learning",
+    institution: "SRM Institute of Science and Technology | Ramapuram",
+    period: "2025–2028 · Currently pursuing",
+    status: "Pursuing"
   }
 ];
 
@@ -371,10 +404,12 @@ const Navbar = () => {
           ))}
         </div>
         <a
-          href="./resume.pdf"
-          download="Hamza_Resume.pdf"
-          className="px-5 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all text-sm font-semibold"
+          href="/resume.pdf"
+          download="Mohammed_Hamza_KF_Resume.pdf"
+          onClick={downloadResume}
+          className="px-5 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all text-sm font-semibold cursor-pointer flex items-center gap-1.5"
         >
+          <Download className="w-4 h-4" />
           Resume
         </a>
       </div>
@@ -466,13 +501,14 @@ const Hero = () => {
               View Projects <ChevronRight className="ml-2 w-5 h-5" />
             </motion.a>
             <motion.a
-              href="./resume.pdf"
-              download="Hamza_Resume.pdf"
+              href="/resume.pdf"
+              download="Mohammed_Hamza_KF_Resume.pdf"
+              onClick={downloadResume}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-xl font-bold hover:bg-white/10 transition-all flex items-center"
+              className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-xl font-bold hover:bg-white/10 transition-all flex items-center cursor-pointer"
             >
-              <Download className="mr-2 w-5 h-5" /> Resume
+              <Download className="mr-2 w-5 h-5" /> Download Resume
             </motion.a>
           </div>
         </motion.div>
@@ -553,7 +589,7 @@ const ExperienceTimeline = () => (
                 <p className="text-blue-400 font-medium">{EDUCATION[0].institution}</p>
                 <div className="flex justify-between mt-4">
                   <span className="text-slate-500 text-sm">{EDUCATION[0].period}</span>
-                  <span className="text-emerald-400 font-bold">{EDUCATION[0].score}</span>
+                  <span className="text-emerald-400 font-bold">{EDUCATION[0].status || "Currently Pursuing"}</span>
                 </div>
               </motion.div>
             </div>
@@ -707,9 +743,15 @@ const App = () => {
       <footer className="py-12 border-t border-white/10 bg-slate-950">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm">
           <p>© 2024 {DEVELOPER_INFO.name}. All rights reserved.</p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href={DEVELOPER_INFO.github} className="hover:text-cyan-400 transition-colors">GitHub</a>
-            <a href={DEVELOPER_INFO.linkedin} className="hover:text-cyan-400 transition-colors">LinkedIn</a>
+          <div className="flex items-center space-x-6 mt-4 md:mt-0">
+            <button
+              onClick={downloadResume}
+              className="hover:text-cyan-400 transition-colors flex items-center gap-1.5 cursor-pointer text-slate-400"
+            >
+              <Download size={14} /> Resume
+            </button>
+            <a href={DEVELOPER_INFO.github} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">GitHub</a>
+            <a href={DEVELOPER_INFO.linkedin} target="_blank" rel="noopener noreferrer" className="hover:text-cyan-400 transition-colors">LinkedIn</a>
           </div>
         </div>
       </footer>
