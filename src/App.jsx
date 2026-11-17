@@ -371,7 +371,7 @@ const Navbar = () => {
           ))}
         </div>
         <a
-          href="/resume.pdf"
+          href="./resume.pdf"
           download="Hamza_Resume.pdf"
           className="px-5 py-2 rounded-full border border-cyan-500/50 text-cyan-400 hover:bg-cyan-500 hover:text-white transition-all text-sm font-semibold"
         >
@@ -466,7 +466,7 @@ const Hero = () => {
               View Projects <ChevronRight className="ml-2 w-5 h-5" />
             </motion.a>
             <motion.a
-              href="/resume.pdf"
+              href="./resume.pdf"
               download="Hamza_Resume.pdf"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
